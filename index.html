@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn AI Headshot Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .upload-section {
+            margin-bottom: 2rem;
+        }
+        input[type="file"] {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            width: 100%;
+        }
+        button {
+            background-color: #0077b5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #005f8d;
+        }
+        #result {
+            margin-top: 2rem;
+            display: none;
+        }
+        #result img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid #eee;
+        }
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: #0077b5;
+            font-weight: 500;
+        }
+        .error {
+            display: none;
+            margin-top: 1rem;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkedIn AI Headshot Generator</h1>
+        <p class="subtitle">Generate a professional 4K LinkedIn headshot from a single photo in 2 minutes.</p>
+        
+        <div class="upload-section">
+            <input type="file" id="photoInput" accept="image/*">
+            <button id="generateBtn">Generate Professional Headshot</button>
+            <div class="loading" id="loading">Generating your headshot... This may take 1-2 minutes.</div>
+            <div class="error" id="error">Failed to generate headshot. Please try again.</div>
+        </div>
+
+        <div id="result">
+            <h3>Your Professional Headshot</h3>
+            <img id="headshotImage" src="" alt="Generated LinkedIn Headshot">
+        </div>
+    </div>
+
+    <script>
+        // **************************
+        // 替换这里为你的豆包API Key
+        const API_KEY = '4f6e2c28-389d-4fbe-9032-fe136fd06c67';
+        // **************************
+        
+        const API_URL = 'https://ark.cn-beijing.volces.com/api/v3/responses';
+        const generateBtn = document.getElementById('generateBtn');
+        const photoInput = document.getElementById('photoInput');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const result = document.getElementById('result');
+        const headshotImage = document.getElementById('headshotImage');
+
+        // 上传图片到临时地址（简化版，实际生产需用OSS）
+        async function uploadImageToTempUrl(file) {
+            // 这里用临时方案，实际部署需替换为火山对象存储OSS上传
+            const reader = new FileReader();
+            return new Promise((resolve) => {
+                reader.onload = (e) => {
+                    resolve(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 调用豆包API生成职业头像
+        async function generateHeadshot(imageUrl) {
+            const prompt = `Generate a hyper-realistic 4K LinkedIn professional headshot, keep the person's facial features unchanged, white shirt, professional studio soft light, light gray minimalist business background, clear and natural facial features, 1:1 ratio, in line with LinkedIn professional standards, Western workplace style`;
+            
+            const requestBody = {
+                "model": "doubao-seed-2-0-pro-260215",
+                "input": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_image",
+                                "image_url": imageUrl
+                            },
+                            {
+                                "type": "input_text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        }
+
+        // 主生成逻辑
+        generateBtn.addEventListener('click', async () => {
+            // 校验是否上传图片
+            if (!photoInput.files || !photoInput.files[0]) {
+                alert('Please upload a photo first.');
+                return;
+            }
+
+            // 显示加载状态
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            result.style.display = 'none';
+            generateBtn.disabled = true;
+
+            try {
+                // 1. 上传图片获取临时URL
+                const tempImageUrl = await uploadImageToTempUrl(photoInput.files[0]);
+                
+                // 2. 调用豆包API生成头像
+                const apiResponse = await generateHeadshot(tempImageUrl);
+                
+                // 3. 解析返回结果（根据豆包API实际返回格式调整）
+                const generatedImageUrl = apiResponse.output?.[0]?.content?.[0]?.image_url || '';
+                
+                if (generatedImageUrl) {
+                    // 显示生成的图片
+                    headshotImage.src = generatedImageUrl;
+                    result.style.display = 'block';
+                } else {
+                    throw new Error('No image generated');
+                }
+
+            } catch (err) {
+                console.error('Generation error:', err);
+                error.style.display = 'block';
+            } finally {
+                // 隐藏加载状态
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
