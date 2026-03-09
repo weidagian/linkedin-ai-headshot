@@ -91,11 +91,9 @@
 
     <script>
         // **************************
-        // 替换这里为你的豆包API Key
-        const API_KEY = '4f6e2c28-389d-4fbe-9032-fe136fd06c67';
+        // 这里不用改！API Key 改在 api/generate-headshot.js 里
         // **************************
         
-        const API_URL = 'https://ark.cn-beijing.volces.com/api/v3/responses';
         const generateBtn = document.getElementById('generateBtn');
         const photoInput = document.getElementById('photoInput');
         const loading = document.getElementById('loading');
@@ -115,36 +113,15 @@
             });
         }
 
-        // 调用豆包API生成职业头像
+        // 🔥 替换后的 generateHeadshot 函数 🔥
+        // 调用 Vercel 后端 API，解决跨域问题
         async function generateHeadshot(imageUrl) {
-            const prompt = `Generate a hyper-realistic 4K LinkedIn professional headshot, keep the person's facial features unchanged, white shirt, professional studio soft light, light gray minimalist business background, clear and natural facial features, 1:1 ratio, in line with LinkedIn professional standards, Western workplace style`;
-            
-            const requestBody = {
-                "model": "doubao-seed-2-0-pro-260215",
-                "input": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_image",
-                                "image_url": imageUrl
-                            },
-                            {
-                                "type": "input_text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ]
-            };
-
-            const response = await fetch(API_URL, {
+            const response = await fetch('/api/generate-headshot', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify({ imageUrl })
             });
 
             if (!response.ok) {
@@ -173,7 +150,7 @@
                 // 1. 上传图片获取临时URL
                 const tempImageUrl = await uploadImageToTempUrl(photoInput.files[0]);
                 
-                // 2. 调用豆包API生成头像
+                // 2. 调用后端API生成头像（不再直接调豆包API）
                 const apiResponse = await generateHeadshot(tempImageUrl);
                 
                 // 3. 解析返回结果（根据豆包API实际返回格式调整）
