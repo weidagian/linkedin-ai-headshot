@@ -69,6 +69,11 @@
             margin-top: 1rem;
             color: #dc3545;
         }
+        .success {
+            display: none;
+            margin-top: 1rem;
+            color: #28a745;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +86,7 @@
             <button id="generateBtn">Generate Professional Headshot</button>
             <div class="loading" id="loading">Generating your headshot... This may take 1-2 minutes.</div>
             <div class="error" id="error">Failed to generate headshot. Please try again.</div>
+            <div class="success" id="success">Headshot generated successfully!</div>
         </div>
 
         <div id="result">
@@ -90,20 +96,16 @@
     </div>
 
     <script>
-        // **************************
-        // 这里不用改！API Key 改在 api/generate-headshot.js 里
-        // **************************
-        
         const generateBtn = document.getElementById('generateBtn');
         const photoInput = document.getElementById('photoInput');
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
+        const success = document.getElementById('success');
         const result = document.getElementById('result');
         const headshotImage = document.getElementById('headshotImage');
 
-        // 上传图片到临时地址（简化版，实际生产需用OSS）
+        // 上传图片转base64
         async function uploadImageToTempUrl(file) {
-            // 这里用临时方案，实际部署需替换为火山对象存储OSS上传
             const reader = new FileReader();
             return new Promise((resolve) => {
                 reader.onload = (e) => {
@@ -113,8 +115,7 @@
             });
         }
 
-        // 🔥 替换后的 generateHeadshot 函数 🔥
-        // 调用 Vercel 后端 API，解决跨域问题
+        // 调用后端API生成头像
         async function generateHeadshot(imageUrl) {
             const response = await fetch('/api/generate-headshot', {
                 method: 'POST',
@@ -124,51 +125,43 @@
                 body: JSON.stringify({ imageUrl })
             });
 
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
             const data = await response.json();
-            return data;
+            if (!data.success) {
+                throw new Error(data.error || 'Unknown error');
+            }
+            return data.imageUrl;
         }
 
-        // 主生成逻辑
+        // 主逻辑
         generateBtn.addEventListener('click', async () => {
-            // 校验是否上传图片
             if (!photoInput.files || !photoInput.files[0]) {
                 alert('Please upload a photo first.');
                 return;
             }
 
-            // 显示加载状态
+            // 重置状态
             loading.style.display = 'block';
             error.style.display = 'none';
+            success.style.display = 'none';
             result.style.display = 'none';
             generateBtn.disabled = true;
 
             try {
-                // 1. 上传图片获取临时URL
+                // 1. 转base64
                 const tempImageUrl = await uploadImageToTempUrl(photoInput.files[0]);
                 
-                // 2. 调用后端API生成头像（不再直接调豆包API）
-                const apiResponse = await generateHeadshot(tempImageUrl);
+                // 2. 调用后端生成头像
+                const generatedImageUrl = await generateHeadshot(tempImageUrl);
                 
-                // 3. 解析返回结果（根据豆包API实际返回格式调整）
-                const generatedImageUrl = apiResponse.output?.[0]?.content?.[0]?.image_url || '';
-                
-                if (generatedImageUrl) {
-                    // 显示生成的图片
-                    headshotImage.src = generatedImageUrl;
-                    result.style.display = 'block';
-                } else {
-                    throw new Error('No image generated');
-                }
+                // 3. 显示结果
+                headshotImage.src = generatedImageUrl;
+                result.style.display = 'block';
+                success.style.display = 'block';
 
             } catch (err) {
                 console.error('Generation error:', err);
                 error.style.display = 'block';
             } finally {
-                // 隐藏加载状态
                 loading.style.display = 'none';
                 generateBtn.disabled = false;
             }
