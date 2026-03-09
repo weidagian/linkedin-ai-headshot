@@ -17,7 +17,7 @@ export default async function handler(request) {
       "model": MODEL_ID,
       "prompt": "保持人物面部特征和姿势不变，生成超写实4K LinkedIn职业头像，白衬衫，专业影棚柔光，浅灰色简约商务背景，人物面部清晰自然，1:1比例，符合领英职场规范，西方职场风格",
       "image": imageUrl, // 直接传base64的图片URL
-      "size": "4K",
+      "size": "2K",
       "output_format": "png",
       "watermark": false
     };
