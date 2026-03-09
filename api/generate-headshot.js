@@ -10,7 +10,7 @@ export default async function handler(request) {
   const prompt = `Generate a hyper-realistic 4K LinkedIn professional headshot, keep the person's facial features unchanged, white shirt, professional studio soft light, light gray minimalist business background, clear and natural facial features, 1:1 ratio, in line with LinkedIn professional standards, Western workplace style`;
 
   const requestBody = {
-    "model": "doubao-seed-2-0-pro-260215",
+    "model": "Doubao-Seedream-5.0-lite",
     "input": [
       {
         "role": "user",
