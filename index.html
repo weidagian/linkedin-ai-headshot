@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinkedIn AI Headshot Generator V01</title>
+    <title>LinkedIn AI Headshot Generator</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -78,7 +78,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>LinkedIn AI Headshot Generator V01</h1>
+        <h1>LinkedIn AI Headshot Generator</h1>
         <p class="subtitle">Generate a professional 4K LinkedIn headshot from a single photo in 2 minutes.</p>
         
         <div class="upload-section">
@@ -115,7 +115,7 @@
             });
         }
 
-        // 调用后端API生成头像
+        // 修复后的API调用逻辑，防止解析崩溃
         async function generateHeadshot(imageUrl) {
             const response = await fetch('/api/generate-headshot', {
                 method: 'POST',
@@ -125,7 +125,17 @@
                 body: JSON.stringify({ imageUrl })
             });
 
-            const data = await response.json();
+            // 先检查响应状态，再解析JSON
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            // 容错处理：防止非JSON响应导致崩溃
+            const data = await response.json().catch(() => {
+                throw new Error('Failed to parse server response');
+            });
+
             if (!data.success) {
                 throw new Error(data.error || 'Unknown error');
             }
