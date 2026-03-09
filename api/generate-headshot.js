@@ -4,60 +4,62 @@ export const config = {
 
 export default async function handler(request) {
   try {
-    // 1. 获取前端传过来的图片base64和参数
     const { imageUrl } = await request.json();
     
-    // 2. 配置豆包API信息（替换成你的Key！）
-    const API_KEY = '4f6e2c28-389d-4fbe-9032-fe136fd06c67'; // 替换为你的火山方舟API Key
+    // 已嵌入你的API Key，无需修改
+    const API_KEY = '4f6e2c28-389d-4fbe-9032-fe136fd06c67';
     const API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
-    const MODEL_ID = 'doubao-seedream-5-0-260128'; // 正确的图生图模型ID
+    const MODEL_ID = 'doubao-seedream-5-0-260128';
 
-    // 3. 构造图生图请求参数（适配LinkedIn职业头像）
     const requestBody = {
       "model": MODEL_ID,
-      "prompt": "保持人物面部特征和姿势不变，生成超写实4K LinkedIn职业头像，白衬衫，专业影棚柔光，浅灰色简约商务背景，人物面部清晰自然，1:1比例，符合领英职场规范，西方职场风格",
-      "image": imageUrl, // 直接传base64的图片URL
-      "size": "2K",
+      "prompt": "保持人物面部特征和姿势不变，生成超写实LinkedIn职业头像，白衬衫，专业影棚柔光，浅灰色简约商务背景，人物面部清晰自然，1:1比例，符合领英职场规范，西方职场风格",
+      "image": imageUrl,
+      "size": "2k", // 修正为合法的size值
       "output_format": "png",
       "watermark": false
     };
 
-    // 4. 调用豆包图生图API
+    // 增加2分钟超时时间，适配图生图的生成耗时
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2分钟超时
+
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
 
-    // 5. 处理API响应
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`API Error: ${JSON.stringify(errorData)}`);
+      const errorData = await response.json().catch(() => ({ error: 'API request failed' }));
+      throw new Error(JSON.stringify(errorData)); // 确保错误是字符串格式
     }
 
     const data = await response.json();
     
-    // 6. 返回生成的图片URL给前端
     return new Response(JSON.stringify({
       success: true,
       imageUrl: data.data[0].url
     }), {
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // 解决跨域
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type'
       },
     });
 
   } catch (error) {
-    // 错误处理
+    // 确保返回合法JSON，避免前端解析崩溃
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error.message || 'Unknown error'
     }), {
       status: 500,
       headers: {
